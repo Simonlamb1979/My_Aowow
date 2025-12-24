@@ -1,0 +1,57 @@
+UPDATE `aowow`.`aowow_quests`, `1125_world_tc`.`quest_template_locale`
+SET `aowow`.`aowow_quests`.`name_loc4` = `1125_world_tc`.`quest_template_locale`.`LogTitle`, 
+`aowow`.`aowow_quests`.`objectives_loc4` = `1125_world_tc`.`quest_template_locale`.`LogDescription`, 
+`aowow`.`aowow_quests`.`details_loc4` = `1125_world_tc`.`quest_template_locale`.`QuestDescription`, 
+`aowow`.`aowow_quests`.`end_loc4` = `1125_world_tc`.`quest_template_locale`.`AreaDescription`, 
+`aowow`.`aowow_quests`.`completed_loc4` = `1125_world_tc`.`quest_template_locale`.`QuestCompletionLog`
+WHERE `aowow`.`aowow_quests`.`id` = `1125_world_tc`.`quest_template_locale`.`ID`;
+
+
+UPDATE `aowow`.`aowow_quests`, `1125_world_tc`.`quest_request_items_locale`
+SET `aowow`.`aowow_quests`.`requestItems_loc4` = `1125_world_tc`.`quest_request_items_locale`.`CompletionText`
+WHERE `aowow`.`aowow_quests`.`id` = `1125_world_tc`.`quest_request_items_locale`.`ID`;
+
+UPDATE `aowow`.`aowow_quests`, `1125_world_tc`.`quest_offer_reward_locale`
+SET `aowow`.`aowow_quests`.`offerReward_loc4` = `1125_world_tc`.`quest_offer_reward_locale`.`RewardText`
+WHERE `aowow`.`aowow_quests`.`id` = `1125_world_tc`.`quest_offer_reward_locale`.`ID`;
+
+UPDATE `aowow`.`aowow_quests`, `1125_world_tc`.`quest_objectives_locale`
+SET `aowow`.`aowow_quests`.`objectiveText1_loc4` = `1125_world_tc`.`quest_objectives_locale`.`Description`
+WHERE `aowow`.`aowow_quests`.`id` = `1125_world_tc`.`quest_objectives_locale`.`QuestId` AND `1125_world_tc`.`quest_objectives_locale`.`StorageIndex` = 0;
+
+UPDATE `aowow`.`aowow_quests`, `1125_world_tc`.`quest_objectives_locale`
+SET `aowow`.`aowow_quests`.`objectiveText2_loc4` = `1125_world_tc`.`quest_objectives_locale`.`Description`
+WHERE `aowow`.`aowow_quests`.`id` = `1125_world_tc`.`quest_objectives_locale`.`QuestId` AND `1125_world_tc`.`quest_objectives_locale`.`StorageIndex` = 1;
+
+UPDATE `aowow`.`aowow_quests`, `1125_world_tc`.`quest_objectives_locale`
+SET `aowow`.`aowow_quests`.`objectiveText3_loc4` = `1125_world_tc`.`quest_objectives_locale`.`Description`
+WHERE `aowow`.`aowow_quests`.`id` = `1125_world_tc`.`quest_objectives_locale`.`QuestId` AND `1125_world_tc`.`quest_objectives_locale`.`StorageIndex` = 2;
+
+UPDATE `aowow`.`aowow_quests`, `1125_world_tc`.`quest_objectives_locale`
+SET `aowow`.`aowow_quests`.`objectiveText4_loc4` = `1125_world_tc`.`quest_objectives_locale`.`Description`
+WHERE `aowow`.`aowow_quests`.`id` = `1125_world_tc`.`quest_objectives_locale`.`QuestId` AND `1125_world_tc`.`quest_objectives_locale`.`StorageIndex` = 3;
+
+INSERT INTO `335_world`.`quest_template_locale`(`ID`, `locale`, `Title`, `Details`, `Objectives`, `EndText`, `CompletedText`)
+SELECT `ID`, `locale`, `LogTitle`, `QuestDescription`, `LogDescription`, `AreaDescription`, `QuestCompletionLog` FROM `1125_world_tc`.`quest_template_locale` WHERE `ID` IN (SELECT `ID` FROM `335_world`.`quest_template`);
+
+UPDATE `335_world`.`quest_template_locale`, `1125_world_tc`.`quest_objectives_locale`
+SET `335_world`.`quest_template_locale`.`objectiveText1` = `1125_world_tc`.`quest_objectives_locale`.`Description`
+WHERE `335_world`.`quest_template_locale`.`id` = `1125_world_tc`.`quest_objectives_locale`.`QuestId` AND `1125_world_tc`.`quest_objectives_locale`.`StorageIndex` = 0;
+
+UPDATE `335_world`.`quest_template_locale`, `1125_world_tc`.`quest_objectives_locale`
+SET `335_world`.`quest_template_locale`.`objectiveText2` = `1125_world_tc`.`quest_objectives_locale`.`Description`
+WHERE `335_world`.`quest_template_locale`.`id` = `1125_world_tc`.`quest_objectives_locale`.`QuestId` AND `1125_world_tc`.`quest_objectives_locale`.`StorageIndex` = 1;
+
+UPDATE `335_world`.`quest_template_locale`, `1125_world_tc`.`quest_objectives_locale`
+SET `335_world`.`quest_template_locale`.`objectiveText3` = `1125_world_tc`.`quest_objectives_locale`.`Description`
+WHERE `335_world`.`quest_template_locale`.`id` = `1125_world_tc`.`quest_objectives_locale`.`QuestId` AND `1125_world_tc`.`quest_objectives_locale`.`StorageIndex` = 2;
+
+UPDATE `335_world`.`quest_template_locale`, `1125_world_tc`.`quest_objectives_locale`
+SET `335_world`.`quest_template_locale`.`objectiveText4` = `1125_world_tc`.`quest_objectives_locale`.`Description`
+WHERE `335_world`.`quest_template_locale`.`id` = `1125_world_tc`.`quest_objectives_locale`.`QuestId` AND `1125_world_tc`.`quest_objectives_locale`.`StorageIndex` = 3;
+
+INSERT INTO `335_world`.`quest_offer_reward_locale`(`ID`, `locale`, `RewardText`)
+SELECT `ID`, `locale`, `RewardText` FROM `1125_world_tc`.`quest_offer_reward_locale` WHERE `ID` IN (SELECT `ID` FROM `335_world`.`quest_template`);
+
+INSERT INTO `335_world`.`quest_request_items_locale`(`ID`, `locale`, `CompletionText`)
+SELECT `ID`, `locale`, `CompletionText` FROM `1125_world_tc`.`quest_request_items_locale` WHERE `ID` IN (SELECT `ID` FROM `335_world`.`quest_template`);

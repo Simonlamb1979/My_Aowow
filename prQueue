@@ -1,0 +1,120 @@
+#!/usr/bin/env php
+<?php
+
+namespace Aowow;
+
+require_once 'includes/kernel.php';
+require_once 'includes/setup/cli.class.php';
+
+/* todo (med):
+    * tidy this file
+    * make win-safe
+*/
+
+if (!CLI)
+    die("this script must be run from CLI\n");
+if (CLI && getcwd().DIRECTORY_SEPARATOR.'prQueue' != __FILE__)
+    die("this script must be run from root directory\n");
+
+if ($_ = getopt('', ['log::']))
+    if (!empty($_['log']))
+        CLI::initLogFile(trim($_['log']));
+
+// check if we already have a queue running
+if (!Profiler::queueLock(getmypid()))
+    exit();
+
+
+CLI::write('profiler queue started', CLI::LOG_OK);
+set_time_limit(0);
+$tCycle = microtime(true);
+
+$error = function (int $type, int $realmGUID, int $realmId) : void
+{
+    $what = match ($type)
+    {
+        Type::PROFILE    => 'char',
+        Type::GUILD      => 'guild',
+        Type::ARENA_TEAM => 'arena team'
+    };
+
+    DB::Aowow()->query('UPDATE ?_profiler_sync SET `status` = ?d, `errorCode` = ?d WHERE `realm` = ?d AND `realmGUID` = ?d AND `type` = ?d', PR_QUEUE_STATUS_ERROR, PR_QUEUE_ERROR_CHAR, $realmId, $realmGUID, $type);
+    trigger_error('prQueue - '.$what.' #'.$realmGUID.' on realm #'.$realmId.' not found. Truncating local placeholder.', E_USER_WARNING);
+};
+
+
+while (Cfg::get('PROFILER_ENABLE', true))
+{
+    $delay = Cfg::get('PROFILER_QUEUE_DELAY') / 1000;
+    if (($tDiff = (microtime(true) - $tCycle)) < $delay)
+    {
+        $wait = $delay - $tDiff;
+        CLI::write('sleeping '.Lang::nf($wait, 2).'s..');
+        usleep($wait * 1000 * 1000);
+    }
+
+    $row = DB::Aowow()->selectRow('SELECT * FROM ?_profiler_sync WHERE `status` = ?d ORDER BY `requestTime` ASC', PR_QUEUE_STATUS_WAITING);
+    if (!$row)
+    {
+        // nothing more to do
+        CLI::write('profiler queue empty - process halted!', CLI::LOG_INFO);
+        Profiler::queueFree();
+        exit();
+    }
+    // scheduled for future date
+    if ($row['requestTime'] > time())
+        continue;
+
+    if (empty(Profiler::getRealms()[$row['realm']]))
+    {
+        DB::Aowow()->query('UPDATE ?_profiler_sync SET `status` = ?d, `errorCode` = ?d WHERE `realm` = ?d AND `type` = ?d AND `typeId` = ?d', PR_QUEUE_STATUS_ERROR, PR_QUEUE_ERROR_ARMORY, $row['realm'], $row['type'], $row['typeId']);
+        CLI::write('realm #'.$row['realm'].' for subject guid '.$row['realmGUID'].' is undefined', CLI::LOG_WARN);
+        continue;
+    }
+    else
+        DB::Aowow()->query('UPDATE ?_profiler_sync SET `status` = ?d WHERE `realm` = ?d AND `type` = ?d AND `typeId` = ?d', PR_QUEUE_STATUS_WORKING, $row['realm'], $row['type'], $row['typeId']);
+
+    switch ($row['type'])
+    {
+        case Type::PROFILE:
+            if (!Profiler::getCharFromRealm($row['realm'], $row['realmGUID']))
+            {
+                $error(Type::PROFILE, $row['realmGUID'], $row['realm']);
+                DB::Aowow()->query('DELETE FROM ?_profiler_profiles WHERE `realm` = ?d AND `realmGUID` = ?d', $row['realm'], $row['realmGUID']);
+                continue 2;
+            }
+
+            break;
+        case Type::GUILD:
+            if (!Profiler::getGuildFromRealm($row['realm'], $row['realmGUID']))
+            {
+                $error(Type::GUILD, $row['realmGUID'], $row['realm']);
+                DB::Aowow()->query('DELETE FROM ?_profiler_guild WHERE `realm` = ?d AND `realmGUID` = ?d', $row['realm'], $row['realmGUID']);
+                continue 2;
+            }
+
+            break;
+        case Type::ARENA_TEAM:
+            if (!Profiler::getArenaTeamFromRealm($row['realm'], $row['realmGUID']))
+            {
+                $error(Type::ARENA_TEAM, $row['realmGUID'], $row['realm']);
+                DB::Aowow()->query('DELETE FROM ?_profiler_arena_team WHERE `realm` = ?d AND `realmGUID` = ?d', $row['realm'], $row['realmGUID']);
+                continue 2;
+            }
+
+            break;
+        default:
+            DB::Aowow()->query('DELETE FROM ?_profiler_sync WHERE realm = ?d AND type = ?d AND typeId = ?d', $row['realm'], $row['type'], $row['typeId']);
+            trigger_error('prQueue - unknown type #'.$row['type'].' to sync into profiler. Removing from queue...', E_USER_ERROR);
+    }
+
+    $tCycle = microtime(true);
+
+    // mark as ready
+    DB::Aowow()->query('UPDATE ?_profiler_sync SET `status` = ?d, `errorCode` = 0 WHERE `realm` = ?d AND `type` = ?d AND `typeId` = ?d', PR_QUEUE_STATUS_READY, $row['realm'], $row['type'], $row['typeId']);
+}
+
+Profiler::queueFree();
+CLI::write('profiler queue halted!', CLI::LOG_INFO);
+
+?>

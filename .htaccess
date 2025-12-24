@@ -1,0 +1,47 @@
+<FilesMatch "\.(conf|php|in)$">
+    Require all denied
+</FilesMatch>
+<FilesMatch "^(index)\.php$">
+    Require all granted
+</FilesMatch>
+
+# Allow access to static files
+<FilesMatch "\.(css|js|txt|gif|jpg|jpeg|png|ico|svg|woff|woff2|ttf|eot)$">
+    Require all granted
+</FilesMatch>
+
+<Files "aowow">
+    ForceType application/x-httpd-php
+</Files>
+
+<Files "prQueue">
+    ForceType application/x-httpd-php
+</Files>
+
+# Block view of some folders
+Options -Indexes
+DirectoryIndex index.php
+
+# Support for UTF8
+AddDefaultCharset utf8
+<IfModule mod_charset.c>
+    CharsetDisable on
+    CharsetRecodeMultipartForms Off
+</IfModule>
+
+# UHD screenshots can get pretty large (cannot be set in config)
+<IfModule mod_php.c>
+    php_value       upload_max_filesize                         20M
+    php_value       post_max_size                               25M
+</IfModule>
+
+RewriteEngine on
+# RewriteBase /~user/localPath/     # enable if the rules do not work, when they should
+
+# Mapper-Helper: If you cant provide maps for all locales, redirect the browser
+# RewriteRule ^(.*/?)static/images/wow/maps/(frfr|dede|eses|ruru)/(.*)$ $1static/images/wow/maps/enus/$3 [NC]
+
+# accept flattened urls | NYI - need more work :x
+#   RewriteRule     ^([a-z0-9\-]+)$                             ?$1       [NC]      # /items                 => ?items
+#   RewriteRule     ^([a-z0-9\-]+)=([^?&]*)$                    ?$1=$2    [NC]      # /items=4.1             => ?items=4.1
+#   RewriteRule     ^([a-z0-9\-]+)=([^?&]*)[&?](.*)$            ?$1=$2&$3 [NC]      # /items=4.1?filter=sl=7 => ?items=4.1&filter=sl=7
