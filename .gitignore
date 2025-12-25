@@ -7,7 +7,6 @@
 /cache/setup/*
 
 # extract from MPQ
-/setup/mpqdata/*
 
 # generated files
 /static/js/profile_all.js
